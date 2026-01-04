@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Storefront</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="shop-body">
+    <div class="watermark-bg" id="watermarkLayer"></div>
+    <div class="cart-fab" onclick="toggleCart()">🛒 <span id="cart-count">0</span></div>
+
+    <div class="shop-content">
+        <header class="shop-header">
+            <h1 id="out-name">Store</h1>
+            <p id="out-address"></p>
+            <input type="text" id="search" onkeyup="doSearch()" placeholder="Search Inventory..." class="search-input">
+        </header>
+        <div class="items-grid" id="out-grid"></div>
+    </div>
+
+    <div id="cartModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header"><h2>Shopping Cart</h2><span onclick="toggleCart()" class="close-x">×</span></div>
+            <div id="cart-list" class="modal-body"></div>
+            <div class="modal-footer">
+                <div class="total-row"><span>Total:</span><span id="totalPrice">₹0</span></div>
+                <div class="dual-action-row">
+                    <button class="cart-btn" onclick="clearCart()">Clear</button>
+                    <button class="buy-btn" onclick="generateBill()">Get Bill & Pay</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="billModal" class="modal-overlay">
+        <div class="bill-card" id="printableBill">
+            <div class="bill-header"><h2>INVOICE</h2><p id="b-name"></p><p id="b-addr"></p></div>
+            <table class="bill-table"><thead><tr><th>Item</th><th>Price</th></tr></thead><tbody id="b-items"></tbody></table>
+            <div class="bill-total"><h3>Total: <span id="b-total"></span></h3></div>
+            <div id="bill-qr" style="display:flex; justify-content:center; margin:15px 0;"></div>
+            <div class="no-print" style="display:flex; gap:10px;">
+                <button class="buy-btn" onclick="window.print()">Download Bill</button>
+                <button class="cart-btn" onclick="document.getElementById('billModal').classList.remove('active')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const shopData = JSON.parse(localStorage.getItem('currentShop'));
+        document.getElementById('out-name').innerText = shopData.n;
+        document.getElementById('out-address').innerText = "📍 " + shopData.a;
+        let cart = [];
+
+        function render(data) {
+            const grid = document.getElementById('out-grid');
+            grid.innerHTML = data.map(item => `
+                <div class="product-card">
+                    <img src="${item.img}" style="width:100%; height:180px; object-fit:cover;">
+                    <div class="item-info">
+                        <h3>${item.name}</h3><p class="price-tag">₹${item.price}</p>
+                        <div class="dual-action-row">
+                            <button class="cart-btn" onclick="addToCart('${item.name}', ${item.price})">Add to Cart</button>
+                            <button class="buy-btn" onclick="payNow(${item.price})">GPay</button>
+                        </div>
+                        <button class="wa-btn" onclick="chatWA('${item.name}')">Order on WhatsApp</button>
+                    </div>
+                </div>`).join('');
+        }
+        function addToCart(n, p) { 
+            cart.push({name:n, price:p}); 
+            document.getElementById('cart-count').innerText = cart.length; 
+            updateCartUI(); 
+        }
+        function updateCartUI() {
+            document.getElementById('cart-list').innerHTML = cart.map(i => `<div class="mini-row"><span>${i.name}</span><span>₹${i.price}</span></div>`).join('');
+            document.getElementById('totalPrice').innerText = "₹" + cart.reduce((s,i)=>s+i.price,0);
+        }
+        function payNow(amt) { window.location.href = `upi://pay?pa=${shopData.u}&pn=${shopData.n}&am=${amt}&cu=INR`; }
+        function chatWA(name) { window.open(`https://wa.me/${shopData.p}?text=Hi, I want to buy ${name}`, '_blank'); }
+        function generateBill() {
+            const total = cart.reduce((s,i)=>s+i.price,0);
+            if(total === 0) return alert("Cart is empty!");
+            document.getElementById('b-name').innerText = shopData.n;
+            document.getElementById('b-addr').innerText = shopData.a;
+            document.getElementById('b-items').innerHTML = cart.map(i=>`<tr><td>${i.name}</td><td>₹${i.price}</td></tr>`).join('');
+            document.getElementById('b-total').innerText = "₹" + total;
+            document.getElementById('bill-qr').innerHTML = "";
+            new QRCode(document.getElementById("bill-qr"), { text: `upi://pay?pa=${shopData.u}&am=${total}`, width:100, height:100 });
+            document.getElementById('billModal').classList.add('active');
+        }
+        function toggleCart() { document.getElementById('cartModal').classList.toggle('active'); }
+        function clearCart() { cart = []; updateCartUI(); toggleCart(); document.getElementById('cart-count').innerText="0";}
+        function doSearch() { render(shopData.items.filter(i => i.name.toLowerCase().includes(document.getElementById('search').value.toLowerCase()))); }
+        render(shopData.items);
+        const bg = document.getElementById('watermarkLayer');
+        for (let j = 0; j < 80; j++) { bg.innerHTML += `<span>Digital Dukaan </span>`; }
+    </script>
+</body>
+</html>

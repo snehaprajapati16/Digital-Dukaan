@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Dukaan | Builder</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="builder-bg">
+    <nav class="navbar">
+        <div class="logo">Digital Dukaan 🚀</div>
+    </nav>
+
+    <main class="hero">
+        <div class="hero-text">
+            <h1>Launch your brand <span class="cyan-text">instantly.</span></h1>
+        </div>
+
+        <div class="glass-container">
+            <div class="input-grid">
+                <div class="field">
+                    <label>Shop Profile</label>
+                    <input type="text" id="shopName" placeholder="Shop Name">
+                    <input type="text" id="ownerPhone" placeholder="WhatsApp Number">
+                    <input type="text" id="address" placeholder="Physical Address">
+                    <label style="margin-top:15px;">GPay UPI Integration</label>
+                    <input type="text" id="upiId" oninput="updateStatus()" placeholder="UPI ID (e.g. name@okicici)">
+                </div>
+                
+                <div class="field">
+                    <label>Product Factory</label>
+                    <div class="entry-box">
+                        <input type="text" id="itemName" placeholder="Product Name">
+                        <input type="number" id="itemPrice" placeholder="Price (₹)">
+                        <input type="file" id="itemFile" accept="image/*" class="file-input">
+                        <button onclick="addItem()" class="btn-add">Add to List +</button>
+                    </div>
+                    <div id="addedItemsList" class="mini-preview-list"></div>
+                </div>
+            </div>
+
+            <div class="action-zone">
+                <div class="action-left">
+                    <div class="payment-status-card">
+                        <div class="status-header">
+                            <span class="status-dot"></span>
+                            <p>GPay & Smart Billing Active</p>
+                        </div>
+                        <div class="status-body">
+                            <p>UPI ID: <span id="displayUpi" class="cyan-text">Not Set</span></p>
+                            <p>Receipt Engine: <span class="cyan-text">Ready</span></p>
+                        </div>
+                    </div>
+                    <button class="generate-btn" onclick="generateSite()">Launch My Website &rarr;</button>
+                </div>
+
+                <div id="urlResult" class="action-right" style="display:none;">
+                    <div class="result-glass-card">
+                        <div id="upi-qrcode"></div>
+                        <div class="result-meta">
+                            <p>Store Successfully Deployed!</p>
+                            <button onclick="openSite()" class="launch-btn">Open My Store 🚀</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let allItems = [];
+        function updateStatus() {
+            const val = document.getElementById('upiId').value;
+            document.getElementById('displayUpi').innerText = val || "Not Set";
+        }
+        function addItem() {
+            const name = document.getElementById('itemName').value;
+            const price = document.getElementById('itemPrice').value;
+            const file = document.getElementById('itemFile').files[0];
+            if (!name || !price || !file) return alert("Fill all details!");
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                allItems.push({ name, price: parseInt(price), img: e.target.result });
+                renderMiniList();
+                document.getElementById('itemName').value = "";
+                document.getElementById('itemPrice').value = "";
+            };
+            reader.readAsDataURL(file);
+        }
+        function renderMiniList() {
+            const list = document.getElementById('addedItemsList');
+            list.innerHTML = allItems.map((it, idx) => `<div class="mini-row"><span>${it.name} - ₹${it.price}</span><span onclick="allItems.splice(${idx},1);renderMiniList()" style="color:red;cursor:pointer">×</span></div>`).join('');
+        }
+        function generateSite() {
+            if (allItems.length === 0) return alert("Add items first!");
+            const upi = document.getElementById('upiId').value;
+            if (!upi) return alert("UPI ID is required!");
+            const shopData = {
+                n: document.getElementById('shopName').value,
+                p: document.getElementById('ownerPhone').value,
+                a: document.getElementById('address').value,
+                u: upi,
+                items: allItems
+            };
+            localStorage.setItem('currentShop', JSON.stringify(shopData));
+            document.getElementById('upi-qrcode').innerHTML = "";
+            new QRCode(document.getElementById("upi-qrcode"), { text: `upi://pay?pa=${shopData.u}&pn=${shopData.n}`, width: 100, height: 100 });
+            document.getElementById('urlResult').style.display = 'flex';
+        }
+        function openSite() { window.open('shop.html', '_blank'); }
+    </script>
+</body>
+</html>
